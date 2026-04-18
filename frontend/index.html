@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadHunter — Local Business Lead Scraper</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src https://fonts.gstatic.com; connect-src 'self' http://localhost:4000 https://maps.googleapis.com;">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a; --surface: #111111; --surface2: #181818;
+    --border: #222222; --border2: #2e2e2e;
+    --accent: #c8f135; --accent2: #a8d420;
+    --text: #f0f0f0; --muted: #666; --muted2: #444;
+    --hot: #ff4d4d; --hot-bg: #1a0808;
+    --font: 'Syne', sans-serif; --mono: 'DM Mono', monospace;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
+  .header { border-bottom: 1px solid var(--border); padding: 1.25rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: rgba(10,10,10,0.95); backdrop-filter: blur(12px); z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+  .logo-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+  .logo span { color: var(--accent); }
+  .header-badge { font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--border2); padding: 4px 10px; border-radius: 20px; }
+  .main { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem; }
+  .hero { margin-bottom: 3rem; }
+  .hero h1 { font-size: clamp(2rem,5vw,3.5rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin-bottom: .75rem; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { color: var(--muted); font-size: 1rem; font-family: var(--mono); }
+  .info-banner { background: var(--surface); border: 1px solid var(--border2); border-left: 3px solid var(--accent); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 2rem; display: flex; align-items: flex-start; gap: 12px; }
+  .info-banner p { font-size: 13px; color: var(--muted); line-height: 1.6; font-family: var(--mono); }
+  .info-banner p strong { color: var(--text); font-weight: 500; }
+  .search-section { background: var(--surface); border: 1px solid var(--border2); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .search-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: .75rem; display: block; }
+  .search-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  input[type="text"] { flex: 1; min-width: 120px; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: .75rem 1rem; color: var(--text); font-family: var(--mono); font-size: 14px; outline: none; transition: border-color .2s; }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted2); }
+  .btn { background: var(--accent); color: #0a0a0a; border: none; border-radius: 8px; padding: .75rem 1.5rem; font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer; transition: background .15s,transform .1s; white-space: nowrap; }
+  .btn:hover { background: var(--accent2); }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { background: var(--muted2); color: var(--muted); cursor: not-allowed; transform: none; }
+  .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: .75rem 1.25rem; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+  .btn-outline:hover { background: rgba(200,241,53,0.08); }
+  .btn-outline:disabled { opacity: .4; cursor: not-allowed; }
+  .filters-section { background: var(--surface); border: 1px solid var(--border2); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-end; }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  select { background: var(--bg); border: 1px solid var(--border2); border-radius: 6px; padding: .5rem .75rem; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; cursor: pointer; transition: border-color .2s; }
+  select:focus { border-color: var(--accent); }
+  input[type="number"] { width: 80px; background: var(--bg); border: 1px solid var(--border2); border-radius: 6px; padding: .5rem .75rem; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color .2s; }
+  input[type="number"]:focus { border-color: var(--accent); }
+  .stats-row { display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; padding: .875rem 1.25rem; min-width: 140px; }
+  .stat-card.hot { border-color: var(--hot); background: var(--hot-bg); }
+  .stat-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-val { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.04em; }
+  .stat-card.hot .stat-val { color: var(--hot); }
+  .results-section { margin-bottom: 2rem; }
+  .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px; }
+  .results-title { font-size: 13px; font-family: var(--mono); color: var(--muted); }
+  .table-wrap { border: 1px solid var(--border2); border-radius: 12px; overflow: hidden; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--surface2); border-bottom: 1px solid var(--border2); }
+  th { padding: .875rem 1rem; text-align: left; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; cursor: pointer; user-select: none; transition: color .15s; }
+  th:hover { color: var(--accent); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface); }
+  tbody tr.hot-lead { background: var(--hot-bg); }
+  tbody tr.hot-lead:hover { background: #200a0a; }
+  td { padding: .875rem 1rem; vertical-align: middle; color: var(--text); font-family: var(--mono); font-size: 12px; }
+  .biz-name { font-family: var(--font); font-size: 13px; font-weight: 600; }
+  .hot-badge { display: inline-block; background: var(--hot); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; letter-spacing: .05em; }
+  .cached-badge { display: inline-block; background: #1a2a00; color: #8bc34a; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; border: 1px solid #3a5a00; }
+  .website-link { color: var(--accent); text-decoration: none; font-size: 11px; }
+  .website-link:hover { text-decoration: underline; }
+  .no-website { color: var(--hot); font-size: 11px; font-weight: 500; }
+  .stars { color: #f5c518; letter-spacing: 1px; }
+  .rating-val { color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .no-phone { color: var(--muted2); font-size: 11px; }
+  .loading-state { text-align: center; padding: 4rem 2rem; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .empty-state { text-align: center; padding: 4rem 2rem; border: 1px dashed var(--border2); border-radius: 12px; }
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: .5; }
+  .empty-title { font-size: 1.1rem; font-weight: 600; margin-bottom: .5rem; }
+  .empty-desc { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .error-banner { background: #1a0808; border: 1px solid var(--hot); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-family: var(--mono); font-size: 13px; color: #ff8080; display: flex; align-items: flex-start; gap: 10px; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 1.5rem; flex-wrap: wrap; }
+  .page-btn { background: var(--surface); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all .15s; }
+  .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .page-btn.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); font-weight: 700; }
+  .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .history-section { margin-bottom: 2rem; }
+  .history-title { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: .75rem; }
+  .history-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .history-chip { background: var(--surface); border: 1px solid var(--border2); border-radius: 20px; padding: 5px 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); cursor: pointer; transition: all .15s; }
+  .history-chip:hover { border-color: var(--accent); color: var(--accent); }
+  @media (max-width: 640px) {
+    .main { padding: 1.5rem 1rem; }
+    .header { padding: 1rem; }
+    .search-row { flex-direction: column; }
+    .filters-section { gap: 1rem; }
+    th:nth-child(5),td:nth-child(5),th:nth-child(6),td:nth-child(6) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo"><div class="logo-dot"></div>Lead<span>Hunter</span></div>
+  <div class="header-badge">v2.0 — Secure Backend</div>
+</header>
+
+<main class="main">
+  <div class="hero">
+    <h1>Find your next<br><em>paying client.</em></h1>
+    <p>// Search local businesses → filter hot leads → export CSV → close deals</p>
+  </div>
+
+  <div class="info-banner">
+    <div style="font-size:18px;margin-top:1px">🔒</div>
+    <p>
+      <strong>Secure mode:</strong> Your API key lives on the backend server — never in the browser.
+      Make sure the backend is running on <strong>localhost:4000</strong> before searching.
+      See README.md for setup instructions.
+    </p>
+  </div>
+
+  <div class="search-section">
+    <span class="search-label">// Search for local businesses</span>
+    <div class="search-row">
+      <input type="text" id="keyword" placeholder="restaurants" style="max-width:180px;" />
+      <input type="text" id="city" placeholder="Islamabad" />
+      <button class="btn" id="searchBtn" onclick="startSearch()">Search Leads</button>
+    </div>
+  </div>
+
+  <div class="filters-section">
+    <div class="filter-group">
+      <span class="filter-label">Website</span>
+      <select id="filterWebsite">
+        <option value="all">All businesses</option>
+        <option value="none">No website only 🔥</option>
+        <option value="has">Has website</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Min Rating</span>
+      <select id="filterRating">
+        <option value="0">Any rating</option>
+        <option value="3">3★ and above</option>
+        <option value="3.5">3.5★ and above</option>
+        <option value="4">4★ and above</option>
+        <option value="4.5">4.5★ and above</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Min Reviews</span>
+      <input type="number" id="filterReviews" value="0" min="0" />
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Sort By</span>
+      <select id="sortBy" onchange="renderTable()">
+        <option value="default">Default</option>
+        <option value="rating_desc">Rating ↓</option>
+        <option value="rating_asc">Rating ↑</option>
+        <option value="reviews_desc">Reviews ↓</option>
+        <option value="no_website">No website first</option>
+      </select>
+    </div>
+    <button class="btn-outline" onclick="applyFilters()">Apply Filters</button>
+  </div>
+
+  <div class="history-section" id="historySection" style="display:none;">
+    <div class="history-title">// Recent searches</div>
+    <div class="history-chips" id="historyChips"></div>
+  </div>
+
+  <div class="error-banner" id="errorBanner" style="display:none;">
+    <span>⚠</span><span id="errorText"></span>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none;">
+    <div class="stat-card"><div class="stat-label">Total Leads</div><div class="stat-val" id="statTotal">0</div></div>
+    <div class="stat-card hot"><div class="stat-label">🔥 No Website</div><div class="stat-val" id="statHot">0</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Rating</div><div class="stat-val" id="statRating">—</div></div>
+    <div class="stat-card"><div class="stat-label">Showing</div><div class="stat-val" id="statShowing">0</div></div>
+  </div>
+
+  <div class="loading-state" id="loadingState" style="display:none;">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Searching Google Maps...</div>
+  </div>
+
+  <div class="results-section" id="resultsSection" style="display:none;">
+    <div class="results-header">
+      <div class="results-title" id="resultsTitle">Showing results</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-outline" onclick="exportCSV()">Export CSV ↓</button>
+        <button class="btn-outline" onclick="exportHotLeads()">Export Hot Leads ↓</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('name')">Business ↕</th>
+            <th onclick="sortTable('phone')">Phone ↕</th>
+            <th onclick="sortTable('website')">Website ↕</th>
+            <th onclick="sortTable('rating')">Rating ↕</th>
+            <th onclick="sortTable('reviews')">Reviews ↕</th>
+            <th>Address</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">🎯</div>
+    <div class="empty-title">Ready to hunt leads</div>
+    <div class="empty-desc">Enter a keyword + city and hit Search Leads.<br>Hot leads (no website) are highlighted in red.</div>
+  </div>
+</main>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────
+const API_BASE = window.location.origin === 'null' || window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+
+// ─── STATE ────────────────────────────────────────────────
+let allResults = [];
+let filteredResults = [];
+let currentPage = 1;
+const PAGE_SIZE = 20;
+let searchHistory = JSON.parse(localStorage.getItem('lh_history') || '[]');
+let sortState = { col: null, dir: 'asc' };
+
+// ─── INIT ─────────────────────────────────────────────────
+window.onload = () => {
+  renderHistory();
+  checkBackendHealth();
+};
+
+async function checkBackendHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/health`);
+    if (!res.ok) throw new Error();
+    console.log('Backend connected ✓');
+  } catch {
+    showError('Cannot connect to backend server. Make sure it is running on localhost:4000. See README.md for setup.');
+  }
+}
+
+// ─── SEARCH ───────────────────────────────────────────────
+async function startSearch() {
+  const keyword = document.getElementById('keyword').value.trim();
+  const city = document.getElementById('city').value.trim();
+
+  if (!keyword || !city) { showError('Please enter both a keyword and a city.'); return; }
+
+  hideError();
+  showLoading('Searching Google Maps...');
+
+  // Save to history
+  const query = `${keyword} ${city}`;
+  if (!searchHistory.includes(query)) {
+    searchHistory.unshift(query);
+    searchHistory = searchHistory.slice(0, 8);
+    localStorage.setItem('lh_history', JSON.stringify(searchHistory));
+    renderHistory();
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/search?keyword=${encodeURIComponent(keyword)}&city=${encodeURIComponent(city)}`);
+    if (res.status === 429) throw new Error('Too many searches. Please wait a moment before trying again.');
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Server error'); }
+
+    const data = await res.json();
+    allResults = data.results || [];
+    filteredResults = [...allResults];
+
+    // Show cache indicator
+    if (data.cached) showToast('Results loaded from cache ⚡');
+
+    hideLoading();
+    applyFilters();
+  } catch (err) {
+    hideLoading();
+    showError(err.message);
+  }
+}
+
+// ─── FILTERS ──────────────────────────────────────────────
+function applyFilters() {
+  const websiteFilter = document.getElementById('filterWebsite').value;
+  const minRating = parseFloat(document.getElementById('filterRating').value) || 0;
+  const minReviews = parseInt(document.getElementById('filterReviews').value) || 0;
+
+  filteredResults = allResults.filter(r => {
+    if (websiteFilter === 'none' && r.website) return false;
+    if (websiteFilter === 'has' && !r.website) return false;
+    if (r.rating < minRating) return false;
+    if (r.reviews < minReviews) return false;
+    return true;
+  });
+
+  const sortVal = document.getElementById('sortBy').value;
+  if (sortVal === 'rating_desc') filteredResults.sort((a,b) => b.rating - a.rating);
+  else if (sortVal === 'rating_asc') filteredResults.sort((a,b) => a.rating - b.rating);
+  else if (sortVal === 'reviews_desc') filteredResults.sort((a,b) => b.reviews - a.reviews);
+  else if (sortVal === 'no_website') filteredResults.sort((a,b) => (!a.website ? -1 : 1));
+
+  currentPage = 1;
+  renderStats();
+  renderTable();
+}
+
+function sortTable(col) {
+  if (sortState.col === col) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  else { sortState.col = col; sortState.dir = 'asc'; }
+  filteredResults.sort((a, b) => {
+    let va = a[col] || '', vb = b[col] || '';
+    if (typeof va === 'number') return sortState.dir === 'asc' ? va - vb : vb - va;
+    return sortState.dir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+// ─── RENDER ───────────────────────────────────────────────
+function renderStats() {
+  const hotCount = allResults.filter(r => !r.website).length;
+  const avgRating = allResults.length ? (allResults.reduce((s,r) => s + (r.rating||0), 0) / allResults.length).toFixed(1) : '—';
+  document.getElementById('statTotal').textContent = allResults.length;
+  document.getElementById('statHot').textContent = hotCount;
+  document.getElementById('statRating').textContent = avgRating;
+  document.getElementById('statShowing').textContent = filteredResults.length;
+  document.getElementById('statsRow').style.display = 'flex';
+}
+
+function renderTable() {
+  if (!filteredResults.length) {
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('emptyState').innerHTML = `<div class="empty-icon">🔍</div><div class="empty-title">No results match your filters</div><div class="empty-desc">Try relaxing the filters above.</div>`;
+    return;
+  }
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsSection').style.display = 'block';
+
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filteredResults.slice(start, start + PAGE_SIZE);
+  document.getElementById('resultsTitle').textContent = `Showing ${start + 1}–${Math.min(start + PAGE_SIZE, filteredResults.length)} of ${filteredResults.length} leads`;
+
+  document.getElementById('resultsBody').innerHTML = pageData.map(r => {
+    const isHot = !r.website;
+    const stars = r.rating ? '★'.repeat(Math.round(r.rating)) + '☆'.repeat(5 - Math.round(r.rating)) : '—';
+    return `<tr class="${isHot ? 'hot-lead' : ''}">
+      <td><span class="biz-name">${esc(r.name)}</span>${isHot ? '<span class="hot-badge">HOT</span>' : ''}</td>
+      <td>${r.phone ? esc(r.phone) : '<span class="no-phone">not listed</span>'}</td>
+      <td>${r.website ? `<a class="website-link" href="${esc(r.website)}" target="_blank" rel="noopener">${esc(r.website.replace(/^https?:\/\//,'').slice(0,28))}</a>` : '<span class="no-website">✗ No website</span>'}</td>
+      <td>${r.rating ? `<span class="stars">${stars}</span><span class="rating-val">${r.rating}</span>` : '—'}</td>
+      <td>${r.reviews ? r.reviews.toLocaleString() : '—'}</td>
+      <td style="max-width:180px;font-size:11px;color:var(--muted)">${esc(r.address)}</td>
+      <td style="text-transform:capitalize;color:var(--muted);font-size:11px">${esc(r.category)}</td>
+    </tr>`;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(filteredResults.length / PAGE_SIZE);
+  if (totalPages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>← Prev</button>`;
+  for (let i = 1; i <= totalPages; i++) html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next →</button>`;
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(filteredResults.length / PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  renderTable();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── HISTORY ──────────────────────────────────────────────
+function renderHistory() {
+  if (!searchHistory.length) return;
+  document.getElementById('historySection').style.display = 'block';
+  document.getElementById('historyChips').innerHTML = searchHistory.map(q => `<div class="history-chip" onclick="loadSearch('${esc(q)}')">${esc(q)}</div>`).join('');
+}
+
+function loadSearch(q) {
+  const parts = q.split(' ');
+  const city = parts.pop();
+  document.getElementById('keyword').value = parts.join(' ');
+  document.getElementById('city').value = city;
+  startSearch();
+}
+
+// ─── EXPORT ───────────────────────────────────────────────
+function exportCSV() {
+  if (!filteredResults.length) return;
+  downloadCSV(filteredResults, 'leads_all.csv');
+}
+
+function exportHotLeads() {
+  const hot = filteredResults.filter(r => !r.website);
+  if (!hot.length) { showError('No hot leads in current results.'); return; }
+  downloadCSV(hot, 'leads_hot.csv');
+}
+
+function downloadCSV(data, filename) {
+  const headers = ['Business Name','Phone','Website','Rating','Reviews','Address','Category','Hot Lead'];
+  const rows = data.map(r => [
+    `"${(r.name||'').replace(/"/g,'""')}"`,
+    `"${(r.phone||'').replace(/"/g,'""')}"`,
+    `"${(r.website||'').replace(/"/g,'""')}"`,
+    r.rating||'', r.reviews||'',
+    `"${(r.address||'').replace(/"/g,'""')}"`,
+    `"${(r.category||'').replace(/"/g,'""')}"`,
+    r.website ? 'No' : 'YES'
+  ].join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── UTILS ────────────────────────────────────────────────
+function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text || 'Loading...';
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('statsRow').style.display = 'none';
+  document.getElementById('searchBtn').disabled = true;
+}
+
+function hideLoading() {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('searchBtn').disabled = false;
+}
+
+function showError(msg) { document.getElementById('errorText').textContent = msg; document.getElementById('errorBanner').style.display = 'flex'; hideLoading(); }
+function hideError() { document.getElementById('errorBanner').style.display = 'none'; }
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:2rem;right:2rem;background:var(--accent);color:#0a0a0a;padding:.75rem 1.25rem;border-radius:8px;font-family:var(--font);font-weight:700;font-size:13px;z-index:999`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && ['keyword','city'].includes(document.activeElement.id)) startSearch();
+});
+</script>
+</body>
+</html>
